@@ -1,0 +1,21 @@
+group 'com.andrew.instrumentation'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'java-library-distribution'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'org.javassist', name: 'javassist', version: '3.22.0-GA'
+}
+
+jar{
+    manifest {
+        attributes 'Premain-Class' : 'com.andrew.instrumentation.agent.ProfilerAgent'
+    }
+}
