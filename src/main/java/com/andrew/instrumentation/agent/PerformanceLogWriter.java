@@ -2,11 +2,8 @@
 
 package com.andrew.instrumentation.agent;
 
-class PerformanceLogWritter {
+public class PerformanceLogWriter {
     private static ProfileWriter profileWriter = new TextProfileWriter();
-
-    public PerformanceLogWritter() {
-    }
 
     public static void onEnterMethod(String methodName) {
         profileWriter.onEnterMethod(methodName);

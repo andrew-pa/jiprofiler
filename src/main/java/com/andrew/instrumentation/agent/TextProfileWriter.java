@@ -51,7 +51,7 @@ class TextProfileWriter implements ProfileWriter {
                     BufferedWriter methodWriter = new BufferedWriter(new FileWriter(methodFilePath));
                     methodWriter.write(methodFileSchema);
                     for(Map.Entry<String, Integer> entry : methodMap.entrySet()) {
-                        methodWriter.write(entry.getValue() + "|" + entry.getKey());
+                        methodWriter.write(entry.getValue() + "|" + entry.getKey() + "\n");
                     }
                     methodWriter.flush();
                     methodWriter.close();
@@ -85,7 +85,7 @@ class TextProfileWriter implements ProfileWriter {
         long currentTime = System.nanoTime();
         int methodId = methodMap.get(methodName);
         try {
-            perfWriter.write(tid + "|" + startTime + "|" + (currentTime - startTime) + "|" + methodId + "|" + callDepth);
+            perfWriter.write(tid + "|" + startTime + "|" + (currentTime - startTime) + "|" + methodId + "|" + callDepth + "\n");
         } catch (Exception e) {
             e.printStackTrace();
         }

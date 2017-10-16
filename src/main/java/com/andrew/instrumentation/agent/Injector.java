@@ -24,6 +24,9 @@ class Injector implements ClassFileTransformer {
         if(className.contains("com/andrew/instrumentation/agent")) {
             return null;
         }
+        if(className.contains("java") || className.contains("sun") || className.contains("jdk")) {
+            return null;
+        }
         return transformClass(classfileBuffer);
     }
 
@@ -52,11 +55,14 @@ class Injector implements ClassFileTransformer {
 
     private void transformMethod(CtBehavior method) {
         String methodName = method.getLongName();
-        try {
-            method.insertBefore("com.andrew.instrumentation.agent.PerformanceLogWriter.onEnterMethod(" + methodName + ");");
-            method.insertAfter("com.andrew.instrumentation.agent.PerformanceLogWriter.onExitMethod(" + methodName + ");");
-        } catch (Exception e) {
-            e.printStackTrace();
+        if(methodName != null && !methodName.equals("")) {
+            System.out.println(methodName);
+            try {
+                method.insertBefore("com.andrew.instrumentation.agent.PerformanceLogWriter.onEnterMethod(\"" + methodName + "\");");
+                method.insertAfter("com.andrew.instrumentation.agent.PerformanceLogWriter.onExitMethod(\"" + methodName + "\");");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
