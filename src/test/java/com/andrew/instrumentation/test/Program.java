@@ -1,6 +1,6 @@
 // Copyright 2017 (c) Robert Palmer. All rights reserved.
 
-package com.andrew.instrumentation.agent;
+package com.andrew.instrumentation.test;
 
 public class Program {
 
