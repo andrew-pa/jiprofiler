@@ -1,0 +1,8 @@
+[package]
+name = "viz"
+version = "0.1.0"
+authors = ["Andrew Palmer <andrew.pa@outlook.com>"]
+
+[dependencies]
+runic = { git = "https://github.com/andrew-pa/runic" }
+winit = "0.7"

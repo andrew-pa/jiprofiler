@@ -2,5 +2,6 @@ build/
 out/
 .gradle/
 .idea/
+viz/target/
 *.swp
 
