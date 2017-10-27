@@ -6,3 +6,5 @@ authors = ["Andrew Palmer <andrew.pa@outlook.com>"]
 [dependencies]
 runic = { git = "https://github.com/andrew-pa/runic" }
 winit = "0.7"
+futures = "0.1"
+futures-cpupool = "0.1"

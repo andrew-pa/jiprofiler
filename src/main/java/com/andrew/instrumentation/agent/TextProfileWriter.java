@@ -25,6 +25,7 @@ class TextProfileWriter implements ProfileWriter {
     private ConcurrentHashMap<Long, Stack<Long>> startStack;
     private ConcurrentHashMap<String, Integer> methodMap;
     private AtomicInteger methodIndex;
+    private long absStartTime;
 
     public TextProfileWriter() {
         try {
@@ -35,7 +36,7 @@ class TextProfileWriter implements ProfileWriter {
             startStack = new ConcurrentHashMap<>();
             methodMap = new ConcurrentHashMap<>();
             methodIndex = new AtomicInteger(0);
-
+            absStartTime = 0L;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -68,6 +69,7 @@ class TextProfileWriter implements ProfileWriter {
         assert methodName != null;
         Thread currentThread = Thread.currentThread();
         long startTime = System.nanoTime();
+        if(absStartTime == 0) absStartTime = startTime;
         Stack<Long> currentStartTimes = startStack.computeIfAbsent(currentThread.getId(), (Long l) -> new Stack<>());
         currentStartTimes.push(startTime);
         methodMap.computeIfAbsent(methodName, (String name) -> methodIndex.getAndIncrement());
@@ -85,7 +87,9 @@ class TextProfileWriter implements ProfileWriter {
         long currentTime = System.nanoTime();
         int methodId = methodMap.get(methodName);
         try {
-            perfWriter.write(tid + "|" + startTime + "|" + (currentTime - startTime) + "|" + methodId + "|" + callDepth + "\n");
+            perfWriter.write(tid + "|" + (startTime-absStartTime) + "|" + (currentTime -
+                    startTime) +
+                    "|" + methodId + "|" + callDepth + "\n");
         } catch (Exception e) {
             e.printStackTrace();
         }
