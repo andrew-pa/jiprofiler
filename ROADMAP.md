@@ -9,6 +9,7 @@
 - reasonable UI
 	- Colors/Themes
 	- Menus
+	- Mouse scrolling interaction
 - rulers/tickmarks
 - Show human understandable numbers in interface
 - way to measure time of lengths
@@ -26,8 +27,12 @@
 
 ## Data/Profiler
 - headers for performance data, binary data format
-	- duration of profile
+	- in header: duration of profile
 - Spring version
 - Sampling profiler
 
 - Documentation/Webpage
+
+- Money 💰
+	- licencing
+	- payment
