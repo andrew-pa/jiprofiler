@@ -29,6 +29,7 @@ pub struct FlameChart {
     offset_x: i64,
     pixels_per_nanosecond: f32,
     last_mouse: Point,
+    mouse_state: Option<(MouseButton, Point, i64)>,
     bounds: Rect,
 }
 
@@ -38,7 +39,7 @@ impl FlameChart {
             current_thread_id: 0,
             offset_x: 0,
             pixels_per_nanosecond: 0.00005,
-            last_mouse: Point::xy(0.0, 0.0),
+            last_mouse: Point::xy(0.0, 0.0), mouse_state: None,
             bounds: rx.bounds()
         }
     }
@@ -47,18 +48,19 @@ impl FlameChart {
 impl VizView for FlameChart {
     fn status(&self, data: &VizData) -> String {
         let current_thread_ix = if self.current_thread_id == 0 { 0 } else { data.thread_ids[self.current_thread_id-1] };
-        format!("{}, {:.2}% | Thread #{}", -self.offset_x, ((-self.offset_x) as f64 / data.abs_end_time as f64)*100.0,
+        format!("{}, {:.2}% | Thread #{}", self.offset_x, ((self.offset_x) as f64 / data.abs_end_time as f64)*100.0,
                 current_thread_ix)
     }
+
     fn event(&mut self, e: WindowEvent, data: &VizData) {
         match e {
             WindowEvent::KeyboardInput { input: k, .. } => {
                 match k.virtual_keycode {
                     Some(VirtualKeyCode::Left) => {
-                        self.offset_x += ((self.bounds.w * 0.1) / self.pixels_per_nanosecond) as i64; 
+                        self.offset_x -= ((self.bounds.w * 0.1) / self.pixels_per_nanosecond) as i64; 
                     },
                     Some(VirtualKeyCode::Right) => {
-                        self.offset_x -= ((self.bounds.w * 0.1) / self.pixels_per_nanosecond) as i64;
+                        self.offset_x += ((self.bounds.w * 0.1) / self.pixels_per_nanosecond) as i64;
                     }
                     Some(VirtualKeyCode::Up) => {
                         self.pixels_per_nanosecond -= 0.000001;
@@ -68,7 +70,6 @@ impl VizView for FlameChart {
                     },
                     Some(VirtualKeyCode::PageUp) => {
                         if k.state == ElementState::Released {
-
                             if self.current_thread_id < data.thread_ids.len() {
                                 self.current_thread_id += 1;
                             }
@@ -83,9 +84,24 @@ impl VizView for FlameChart {
                 }
             },
             WindowEvent::MouseMoved { position: (x,y), .. } => {
+                if let Some((MouseButton::Left, click_pos, click_offset)) = self.mouse_state {
+                    self.offset_x = ((click_pos.x - self.last_mouse.x) / self.pixels_per_nanosecond) as i64 + click_offset;
+                }
                 self.last_mouse = Point::xy(x as f32, y as f32);
             },
             WindowEvent::MouseInput { state, button, .. } => {
+                self.mouse_state = match state {
+                    ElementState::Pressed => Some((button, self.last_mouse, self.offset_x)),
+                    _ => None
+                };
+            },
+            WindowEvent::MouseWheel { delta, .. } => {
+                match delta {
+                    MouseScrollDelta::LineDelta(_, y) => {
+                        self.pixels_per_nanosecond += y * 0.00001;
+                    },
+                    _ => panic!("wierd mouse wheel delta")
+                }
             },
             _ => {}
 
@@ -93,6 +109,7 @@ impl VizView for FlameChart {
     }
 
     fn paint(&mut self, rx: &mut RenderContext, res: &Resources, data: &VizData) {
+        self.pixels_per_nanosecond = self.pixels_per_nanosecond.max(0.000001);
         self.bounds = rx.bounds();
         let current_thread_ix = if self.current_thread_id == 0 { 0 } else { data.thread_ids[self.current_thread_id-1] };
 
@@ -101,7 +118,7 @@ impl VizView for FlameChart {
             if current_thread_ix > 0 && cr.thread_id != current_thread_ix { continue; }
             let w = cr.elapsed_time as f32 * self.pixels_per_nanosecond;
             if w < 2.0 { continue; }
-            let x = (self.offset_x + (cr.start_time) as i64) as f32 * self.pixels_per_nanosecond;
+            let x = (-self.offset_x + (cr.start_time) as i64) as f32 * self.pixels_per_nanosecond;
             if x+w < 0.0 || x > self.bounds.w { continue; }
 
             rx.set_color(Color::rgb(0.8, 0.6, (cr.method_id as f32 * 8.23).sin().abs()));

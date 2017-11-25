@@ -9,7 +9,7 @@
 - reasonable UI
 	- Colors/Themes
 	- Menus
-	- Mouse scrolling interaction
+	+ Mouse scrolling interaction
 - rulers/tickmarks
 - Show human understandable numbers in interface
 - way to measure time of lengths
