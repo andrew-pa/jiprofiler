@@ -5,6 +5,7 @@ use runic::*;
 use winit::*;
 
 use data::*;
+use menu::*;
 
 pub struct Resources {
     pub font: Font
@@ -19,8 +20,12 @@ impl Resources {
 }
 
 pub trait VizView {
-    fn event(&mut self, e: WindowEvent, data: &VizData);
+    fn event(&mut self, e: &WindowEvent, data: &VizData, menus: &mut MenuContext) -> bool;
+    fn menu_selection(&mut self, data: &VizData, tag: &'static str, sel: usize);
+    fn reset(&mut self);
+
     fn paint(&mut self, rx: &mut RenderContext, res: &Resources, data: &VizData);
+
     fn status(&self, data: &VizData) -> String;
 }
 
@@ -31,6 +36,7 @@ pub struct FlameChart {
     last_mouse: Point,
     mouse_state: Option<(MouseButton, Point, i64)>,
     bounds: Rect,
+    selected_index: isize,
 }
 
 impl FlameChart {
@@ -40,7 +46,8 @@ impl FlameChart {
             offset_x: 0,
             pixels_per_nanosecond: 0.00005,
             last_mouse: Point::xy(0.0, 0.0), mouse_state: None,
-            bounds: rx.bounds()
+            bounds: rx.bounds(),
+            selected_index: -1,
         }
     }
 }
@@ -52,9 +59,14 @@ impl VizView for FlameChart {
                 current_thread_ix)
     }
 
-    fn event(&mut self, e: WindowEvent, data: &VizData) {
+    fn reset(&mut self) {
+        self.offset_x = 0;
+        self.pixels_per_nanosecond = 0.0;
+    }
+
+    fn event(&mut self, e: &WindowEvent, data: &VizData, menus: &mut MenuContext) -> bool {
         match e {
-            WindowEvent::KeyboardInput { input: k, .. } => {
+            &WindowEvent::KeyboardInput { input: k, .. } => {
                 match k.virtual_keycode {
                     Some(VirtualKeyCode::Left) => {
                         self.offset_x -= ((self.bounds.w * 0.1) / self.pixels_per_nanosecond) as i64; 
@@ -83,19 +95,37 @@ impl VizView for FlameChart {
                     _ => {}
                 }
             },
-            WindowEvent::MouseMoved { position: (x,y), .. } => {
+            &WindowEvent::MouseMoved { position: (x,y), .. } => {
                 if let Some((MouseButton::Left, click_pos, click_offset)) = self.mouse_state {
                     self.offset_x = ((click_pos.x - self.last_mouse.x) / self.pixels_per_nanosecond) as i64 + click_offset;
                 }
                 self.last_mouse = Point::xy(x as f32, y as f32);
             },
-            WindowEvent::MouseInput { state, button, .. } => {
+            &WindowEvent::MouseInput { state, button, .. } => {
                 self.mouse_state = match state {
-                    ElementState::Pressed => Some((button, self.last_mouse, self.offset_x)),
+                    ElementState::Pressed =>
+                        Some((button, self.last_mouse, self.offset_x)),
                     _ => None
                 };
+                if state == ElementState::Released && button == MouseButton::Right {
+                    let current_thread_ix = if self.current_thread_id == 0 { 0 } else { data.thread_ids[self.current_thread_id-1] };
+                    self.selected_index = -1;
+                    for (i,cr) in data.calls.iter().enumerate() {
+                        if current_thread_ix > 0 && cr.thread_id != current_thread_ix { continue; }
+                        let w = cr.elapsed_time as f32 * self.pixels_per_nanosecond;
+                        if w < 2.0 { continue; }
+                        let x = (-self.offset_x + (cr.start_time) as i64) as f32 * self.pixels_per_nanosecond;
+                        if x+w < 0.0 || x > self.bounds.w { continue; }
+
+                        if Rect::xywh(x, 34.0*cr.depth as f32, w, 32.0).contains(self.last_mouse) {
+                            menus.popup(vec![ "zoom into view" ], self.last_mouse, "call");
+                            self.selected_index = i as isize;
+                            return true;
+                        }
+                    }
+                }
             },
-            WindowEvent::MouseWheel { delta, .. } => {
+            &WindowEvent::MouseWheel { delta, .. } => {
                 match delta {
                     MouseScrollDelta::LineDelta(_, y) => {
                         self.pixels_per_nanosecond += y * 0.00001;
@@ -105,6 +135,21 @@ impl VizView for FlameChart {
             },
             _ => {}
 
+        }
+        false
+    }
+
+    fn menu_selection(&mut self, data: &VizData, tag: &'static str, sel: usize) {
+        if tag == "call" {
+            match sel {
+                0 => {
+                    let cr = &data.calls[self.selected_index as usize];
+                    let (new_offset, new_ppn) = (cr.start_time as i64, self.bounds.w / cr.elapsed_time as f32);
+                    self.pixels_per_nanosecond = (self.bounds.w / cr.elapsed_time as f32) * 0.9;
+                    self.offset_x = cr.start_time as i64 - (self.bounds.w * 0.05 / self.pixels_per_nanosecond) as i64;
+                }
+                _ => unreachable!()
+            }
         }
     }
 

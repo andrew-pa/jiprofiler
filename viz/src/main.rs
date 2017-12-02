@@ -8,7 +8,7 @@ use std::io;
 use std::io::{BufRead, BufReader};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::iter::FromIterator;
+use std::iter::{FromIterator, repeat};
 
 use runic::*;
 use winit::*;
@@ -18,14 +18,19 @@ use std::thread::Thread;
 use std::sync::{Arc, RwLock, TryLockError};
 
 mod data;
-use data::{VizData, CallRecord};
+use data::{VizData};
 mod view;
 use view::*;
+
+mod menu;
+use menu::*;
 
 struct VizApp {
     data: Arc<RwLock<VizData>>,
     res: Resources,
-    view: Box<VizView>
+    view: Box<VizView>,
+    mx: MenuContext,
+    last_mouse: Point
 }
 
 impl VizApp {
@@ -39,7 +44,9 @@ impl VizApp {
         VizApp {
             data: data,
             res: res,
-            view: Box::new(FlameChart::init(rx))
+            view: Box::new(FlameChart::init(rx)),
+            mx: MenuContext::new(),
+            last_mouse: Point::default()
         }
     }
 }
@@ -58,6 +65,7 @@ impl App for VizApp {
                 rx.set_color(Color::rgb(0.8, 0.8, 0.8));
                 rx.draw_text_layout(Point::xy(2.0, 0.0), &status_tx);
                 self.view.paint(rx, &self.res, &d);
+                self.mx.paint(rx, &self.res);
             },
             Err(TryLockError::WouldBlock) => {
                 rx.set_color(Color::rgb(0.7, 0.7, 0.7));
@@ -71,8 +79,29 @@ impl App for VizApp {
 
     fn event(&mut self, ev: Event) -> bool {
         if let Event::WindowEvent { event: e, .. } = ev {
+            match e {
+                WindowEvent::MouseMoved { position, .. } => {
+                    self.last_mouse = Point::from(position);
+                },
+                _ => {}
+            }
             let d = self.data.read().unwrap();
-            self.view.event(e, &d);
+            match self.mx.event(&e) {
+                Some(("main", i)) => match i {
+                    0 => {},
+                    1 => {
+                        self.view.reset();
+                    },
+                    _ => {}
+                },
+                Some((tag, i)) => self.view.menu_selection(&d, tag, i),
+                None => {}
+            }
+            if !self.view.event(&e, &d, &mut self.mx) {
+                if let WindowEvent::MouseInput { state: ElementState::Released, button: MouseButton::Right, .. } = e {
+                    self.mx.popup(vec![ "load file", "reset view" ], self.last_mouse, "main");
+                }
+            }
         }
         false
     }
@@ -81,7 +110,10 @@ impl App for VizApp {
 fn main() {
     runic::init();
     let mut evl = EventsLoop::new();
-    let mut window = WindowBuilder::new().with_dimensions(512, 521).with_title("Java Performance Visualizer").build(&evl).expect("create window!");
+    let mut window = WindowBuilder::new()
+        .with_dimensions(512, 521)
+        .with_title("Java Performance Visualizer")
+        .build(&evl).expect("create window!");
     let mut rx = RenderContext::new(&mut window).expect("create render context!");
     let mut app = VizApp::init(&mut rx);
     app.run(&mut rx, &mut evl);
