@@ -1,0 +1,42 @@
+ROADMAP
+
+* Interface
+** TODO Zoom
+      - [X] Click to zoom block into some large percentage of the screen
+      - [X] Speedy return to a high zoom level
+      - [ ] acceleration so that zoom is functional at any zoom level
+      - [ ] Zoom to box selection
+      - [X] min/max zoom levels
+** TODO reasonable UI
+      - [ ] Colors/Themes
+      - [X] Menus
+      - [X] Mouse scrolling interaction
+      - [ ] Load profile data files from menu
+      - [ ] Display current file
+** TODO rulers/tickmarks
+** TODO Show human understandable numbers in interface
+** TODO way to measure time of lengths
+
+* TODO fix runic
+
+* Features
+** TODO Swimlanes
+	- [ ] Call stack pane
+	- [ ] Show/Hide lanes
+	- [ ] Rearrange lanes
+** TODO annotated export
+** TODO app packaging
+	- [ ] installer
+
+* Data/Profiler
+** TODO headers for performance data, binary data format
+	- [ ] in header: duration of profile
+	- [ ] put method name index into the same file so it's not confusing
+** TODO Spring version
+** MAYBE Sampling profiler
+
+* TODO Documentation/Webpage
+
+* TODO Money 💰
+	- [ ] licencing
+	- [ ] payment
