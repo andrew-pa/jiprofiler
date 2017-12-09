@@ -75,10 +75,12 @@ impl VizView for FlameChart {
                         self.offset_x += ((self.bounds.w * 0.1) / self.pixels_per_nanosecond) as i64;
                     }
                     Some(VirtualKeyCode::Up) => {
-                        self.pixels_per_nanosecond -= 0.000001;
+                        //self.pixels_per_nanosecond -= 0.000001;
+                        self.pixels_per_nanosecond *= 0.9;
                     },
                     Some(VirtualKeyCode::Down) => {
-                        self.pixels_per_nanosecond += 0.000001;
+                        //self.pixels_per_nanosecond += 0.000001;
+                        self.pixels_per_nanosecond /= 0.9;
                     },
                     Some(VirtualKeyCode::PageUp) => {
                         if k.state == ElementState::Released {
