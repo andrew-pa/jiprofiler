@@ -132,7 +132,9 @@ impl VizView for FlameChart {
                     MouseScrollDelta::LineDelta(_, y) => {
                         self.pixels_per_nanosecond += y * 0.00001;
                     },
-                    _ => panic!("wierd mouse wheel delta")
+                    MouseScrollDelta::PixelDelta(x, y) => {
+                        self.pixels_per_nanosecond += y * 0.0001;
+                    }
                 }
             },
             _ => {}

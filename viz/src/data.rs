@@ -104,6 +104,7 @@ impl VizData {
                 data.write().unwrap().calls.append(&mut res);
             }
         }
+        data.write().unwrap().calls.append(&mut res);
         {
             let mut vd = data.write().unwrap();
             vd.thread_ids = Vec::from_iter(tids.iter().map(|&v| v));
