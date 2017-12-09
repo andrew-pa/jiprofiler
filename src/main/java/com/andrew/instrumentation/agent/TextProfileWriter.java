@@ -5,7 +5,9 @@ package com.andrew.instrumentation.agent;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -15,28 +17,23 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class TextProfileWriter implements ProfileWriter {
 
-    private static final String perfFileSchema = "Thread|Start|Elapsed|Method|Depth\n";
-    private static final String methodFileSchema = "Method|Name\n";
-    private final String perfFilePrefix = "perfdata";
-    private final String fileExtension = ".csv";
-    private final String methodFilePrefix = "methodData";
-
     private BufferedWriter perfWriter;
     private ConcurrentHashMap<Long, Stack<Long>> startStack;
     private ConcurrentHashMap<String, Integer> methodMap;
+    private Set<Long> threadIds;
+    private long duration;
     private AtomicInteger methodIndex;
     private long absStartTime;
 
-    public TextProfileWriter() {
+    public TextProfileWriter(String perfFilePath) {
         try {
-            String perfFilePath = Paths.get(perfFilePrefix + fileExtension).toAbsolutePath().toString();
             System.out.println("Writing performance data to: " + perfFilePath);
             perfWriter = new BufferedWriter(new FileWriter(perfFilePath));
-            perfWriter.write(perfFileSchema);
             startStack = new ConcurrentHashMap<>();
             methodMap = new ConcurrentHashMap<>();
             methodIndex = new AtomicInteger(0);
-            absStartTime = 0L;
+            threadIds = new HashSet<>();
+            absStartTime = duration = 0L;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -44,19 +41,21 @@ class TextProfileWriter implements ProfileWriter {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
+
+                    perfWriter.write("methods:\n");
+                    for(Map.Entry<String, Integer> entry : methodMap.entrySet()) {
+                        perfWriter.write(entry.getValue() + "|" + entry.getKey() + "\n");
+                    }
+
+                    perfWriter.write("threads:");
+                    for(long t : threadIds) {
+                        perfWriter.write(t+";");
+                    }
+                    perfWriter.write("\n");
+                    perfWriter.write(""+duration);
+
                     perfWriter.flush();
                     perfWriter.close();
-
-                    String methodFilePath = Paths.get(methodFilePrefix + fileExtension).toAbsolutePath().toString();
-                    System.out.println("Writing method file to: " + methodFilePath);
-                    BufferedWriter methodWriter = new BufferedWriter(new FileWriter(methodFilePath));
-                    methodWriter.write(methodFileSchema);
-                    for(Map.Entry<String, Integer> entry : methodMap.entrySet()) {
-                        methodWriter.write(entry.getValue() + "|" + entry.getKey() + "\n");
-                    }
-                    methodWriter.flush();
-                    methodWriter.close();
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -81,6 +80,7 @@ class TextProfileWriter implements ProfileWriter {
 
         Thread currentThread = Thread.currentThread();
         long tid = currentThread.getId();
+        threadIds.add(tid);
         Stack<Long> threadStartTime = startStack.get(tid);
         int callDepth = threadStartTime.size();
         long startTime = threadStartTime.pop();
@@ -90,6 +90,7 @@ class TextProfileWriter implements ProfileWriter {
             perfWriter.write(tid + "|" + (startTime-absStartTime) + "|" + (currentTime -
                     startTime) +
                     "|" + methodId + "|" + callDepth + "\n");
+            duration = currentTime-absStartTime;
         } catch (Exception e) {
             e.printStackTrace();
         }

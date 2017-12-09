@@ -24,7 +24,10 @@ class Injector implements ClassFileTransformer {
         if(className.contains("com/andrew/instrumentation/agent")) {
             return null;
         }
-        if(className.contains("java") || className.contains("sun") || className.contains("jdk")) {
+        if(className.contains("java")
+                || className.contains("sun")
+                || className.contains("jdk")
+                || className.contains("intellij")) {
             return null;
         }
         return transformClass(classfileBuffer);
