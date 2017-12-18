@@ -5,6 +5,10 @@ use std::fs::File;
 use std::iter::FromIterator;
 use std::path::{Path,PathBuf};
 
+use std::error::Error;
+
+use zip::read::*;
+
 #[derive(Debug, Copy, Clone)]
 /// Times in nanoseconds
 pub struct CallRecord {
@@ -65,50 +69,57 @@ pub struct VizData {
     pub method_index: HashMap<u32, String>,
     pub thread_ids: Vec<u32>,
     pub abs_end_time: u64,
-    path: (PathBuf, PathBuf)
+    path: PathBuf
+}
+
+fn flatten_opt_res<T,E,F: FnOnce()->E>(v: Option<Result<T,E>>, none_err: F) -> Result<T, E> {
+    match v {
+        Some(r) => r,
+        None => Err(none_err())
+    }
 }
 
 impl VizData {
     /// Create a new VizData from a data file and method index. Does not actually load data
-    pub fn new<P: AsRef<Path>>(data_path: P, method_index_path: P) -> Result<VizData, io::Error> {
+    pub fn new<P: AsRef<Path>>(data_path: P) -> Result<VizData, Box<Error>> {
         let mut dp = PathBuf::new(); dp.push(data_path);
-        let mut mp = PathBuf::new(); mp.push(method_index_path);
         Ok(VizData {
             calls: Vec::new(),
             method_index: HashMap::new(),
             thread_ids: Vec::new(),
             abs_end_time: 0,
-            path: (dp, mp)
+            path: dp,
         })
     }
 
     /// Load data from files if it is unloaded
     pub fn load(data: ::std::sync::Arc<::std::sync::RwLock<VizData>>) -> Result<(), io::Error> {
-        let (data_f, mthd_f) = {
+        let mut ach = {
             let s = data.read().unwrap();
-            (BufReader::new(File::open(&s.path.0)?),
-             BufReader::new(File::open(&s.path.1)?))
+            ZipArchive::new(File::open(&s.path)?)?
         };
-        { (data.write().unwrap().method_index) = read_method_index(mthd_f)?; }
+        { (data.write().unwrap().method_index) = read_method_index(BufReader::new(ach.by_name("methods")?))?; }
         let mut res = Vec::new();
-        let mut start_time: u64 = ::std::u64::MAX;
-        let mut end_time: u64 = 0;
-        let mut tids = HashSet::new();
-        for linep in data_f.lines().skip(1) {
-            let cr = CallRecord::from_psv(&linep?)?;
-            if cr.start_time < start_time { start_time = cr.start_time; }
-            if cr.start_time+cr.elapsed_time > end_time { end_time = cr.start_time+cr.elapsed_time; }
-            tids.insert(cr.thread_id);
-            res.push(cr);
-            if res.len() > 16 {
-                data.write().unwrap().calls.append(&mut res);
-            }
-        }
-        data.write().unwrap().calls.append(&mut res);
         {
+            let data_f = BufReader::new(ach.by_name("data")?);
+            for linep in data_f.lines().skip(1) {
+                let cr = CallRecord::from_psv(&linep?)?;
+                res.push(cr);
+                if res.len() > 16 {
+                    data.write().unwrap().calls.append(&mut res);
+                }
+            }
+            data.write().unwrap().calls.append(&mut res);
+        }
+        {
+            let mut header_f = (BufReader::new(ach.by_name("header")?)).lines();
             let mut vd = data.write().unwrap();
-            vd.thread_ids = Vec::from_iter(tids.iter().map(|&v| v));
-            vd.abs_end_time = end_time;
+            vd.thread_ids = Vec::new();
+            for id in flatten_opt_res(header_f.next(), ||io::Error::new(io::ErrorKind::UnexpectedEof, ""))?.split(';').filter(|x| x.len()!=0).map(|v| v.parse::<u32>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))) {
+                    
+                        vd.thread_ids.push(id?);
+            }
+            vd.abs_end_time = flatten_opt_res(header_f.next(), ||io::Error::new(io::ErrorKind::UnexpectedEof, ""))?.parse::<u64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         }
         Ok(())
     }

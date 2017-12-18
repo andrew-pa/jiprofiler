@@ -11,25 +11,29 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 class Injector implements ClassFileTransformer {
     private Instrumentation instrumentation;
+    private Set<String> classPathBlackList;
 
     public Injector(Instrumentation inst) {
         instrumentation = inst;
+        classPathBlackList = new HashSet<>(Arrays.asList(
+                "com/andrew/instrumentation/agent",
+                "java", "sun", "jdk", "intellij"));
     }
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-        if(className.contains("com/andrew/instrumentation/agent")) {
-            return null;
-        }
-        if(className.contains("java")
-                || className.contains("sun")
-                || className.contains("jdk")
-                || className.contains("intellij")) {
-            return null;
-        }
+        for(String cnb : classPathBlackList)
+            if(className.contains(cnb)) {
+                //System.out.println("Ignoring blacklisted class " + className);
+                return null;
+            }
+
         return transformClass(classfileBuffer);
     }
 

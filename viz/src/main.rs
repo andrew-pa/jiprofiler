@@ -3,6 +3,7 @@ extern crate runic;
 extern crate winit;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate zip;
 
 use std::io;
 use std::io::{BufRead, BufReader};
@@ -36,10 +37,10 @@ struct VizApp {
 impl VizApp {
     fn init(rx: &mut RenderContext) -> VizApp {
         let mut args = std::env::args().skip(1);
-        let (perf_path, method_path) = (args.next().expect("perf data path"), args.next().expect("method index path"));
-        let data = Arc::new(RwLock::new(VizData::new(perf_path, method_path).expect("open viz data")));
+        let perf_path = args.next().expect("perf data path");
+        let data = Arc::new(RwLock::new(VizData::new(perf_path).expect("open viz data")));
         let tdata = data.clone();
-        let _ = thread::spawn(move || { VizData::load(tdata) });
+        let _ = thread::spawn(move || { VizData::load(tdata).expect("load viz data") });
         let res = Resources::init(rx).expect("create graphics resources");
         VizApp {
             data: data,
