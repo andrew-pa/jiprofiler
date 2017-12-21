@@ -88,7 +88,7 @@ impl Default for VizData {
             thread_ids: Vec::new(),
             abs_end_time: 0,
             path: None,
-            loaded: false
+            loaded: true
         }
     }
 }

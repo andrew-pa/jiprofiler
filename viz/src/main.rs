@@ -94,6 +94,16 @@ impl App for VizApp {
                 WindowEvent::MouseMoved { position, .. } => {
                     self.last_mouse = Point::from(position);
                 },
+                WindowEvent::DroppedFile(ref path) => {
+                    let mut dw = self.data.write().unwrap();
+                    if !dw.loaded { 
+                        self.mx.popup(vec!["please wait for current file to load before replacing it"], self.last_mouse, "err");
+                    } else {
+                        dw.path = Some(path.clone());
+                        let tdata = self.data.clone();
+                        let _ = thread::spawn(move || { VizData::load(tdata).expect("load viz data"); });
+                    }
+                },
                 _ => {}
             }
             let d = self.data.read().unwrap();
