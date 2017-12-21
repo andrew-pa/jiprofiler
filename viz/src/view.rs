@@ -159,10 +159,12 @@ impl VizView for FlameChart {
 
     fn paint(&mut self, rx: &mut RenderContext, res: &Resources, data: &VizData) {
         self.pixels_per_nanosecond = self.pixels_per_nanosecond.max(0.000001);
+        self.offset_x = self.offset_x.max(0);
         self.bounds = rx.bounds();
         let current_thread_ix = if self.current_thread_id == 0 { 0 } else { data.thread_ids[self.current_thread_id-1] };
 
         let mut hovered_record: Option<&CallRecord> = None;
+
         for cr in data.calls.iter() {
             if current_thread_ix > 0 && cr.thread_id != current_thread_ix { continue; }
             let w = cr.elapsed_time as f32 * self.pixels_per_nanosecond;

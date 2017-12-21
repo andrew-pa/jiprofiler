@@ -17,6 +17,7 @@ use winit::*;
 use std::thread;
 use std::thread::Thread;
 use std::sync::{Arc, RwLock, TryLockError};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 mod data;
 use data::{VizData};
@@ -37,17 +38,18 @@ struct VizApp {
 impl VizApp {
     fn init(rx: &mut RenderContext) -> VizApp {
         let mut args = std::env::args().skip(1);
-        let perf_path = args.next().expect("perf data path");
-        let data = Arc::new(RwLock::new(VizData::new(perf_path).expect("open viz data")));
-        let tdata = data.clone();
-        let _ = thread::spawn(move || { VizData::load(tdata).expect("load viz data") });
+        let data = Arc::new(RwLock::new(args.next().map(|perf_path| VizData::new(perf_path)).unwrap_or_default()));
+        if data.read().unwrap().path.is_some() {
+            let tdata = data.clone();
+            let t = thread::spawn(move || { VizData::load(tdata).expect("load viz data"); });
+        }
         let res = Resources::init(rx).expect("create graphics resources");
         VizApp {
             data: data,
             res: res,
             view: Box::new(FlameChart::init(rx)),
             mx: MenuContext::new(),
-            last_mouse: Point::default()
+            last_mouse: Point::default(),
         }
     }
 }
@@ -59,8 +61,16 @@ impl App for VizApp {
         match self.data.try_read() {
             Ok(d) => {
                 let bounds = rx.bounds();
-                let status_tx = rx.new_text_layout(&format!("{} | {} records",self.view.status(&d), d.calls.len()),
-                                        &self.res.font, bounds.w, bounds.h).expect("create status text layout");
+                let status_text = match d.path.as_ref() {
+                    Some(p) => format!("{} | {} records {}[{}]",
+                                       self.view.status(&d),
+                                       d.calls.len(),
+                                       if !d.loaded { "[still loading...] " } else { "" },
+                                       d.path.as_ref().unwrap().display()),
+                    None => String::from("no file")
+                };
+                let status_tx = rx.new_text_layout(&status_text,
+                                                   &self.res.font, bounds.w, bounds.h).expect("create status text layout");
                 rx.set_color(Color::rgb(0.3, 0.3, 0.3));
                 rx.fill_rect(Rect::xywh(0.0, 0.0, bounds.w, status_tx.bounds().h+2.0));
                 rx.set_color(Color::rgb(0.8, 0.8, 0.8));
@@ -89,7 +99,8 @@ impl App for VizApp {
             let d = self.data.read().unwrap();
             match self.mx.event(&e) {
                 Some(("main", i)) => match i {
-                    0 => {},
+                    0 => {
+                    },
                     1 => {
                         self.view.reset();
                     },

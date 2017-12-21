@@ -12,7 +12,7 @@ ROADMAP
       - [X] Menus
       - [X] Mouse scrolling interaction
       - [ ] Load profile data files from menu
-      - [ ] Display current file
+      - [X] Display current file
 ** TODO rulers/tickmarks
 ** TODO Show human understandable numbers in interface
 ** TODO way to measure time of lengths

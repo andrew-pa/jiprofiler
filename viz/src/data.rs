@@ -69,7 +69,8 @@ pub struct VizData {
     pub method_index: HashMap<u32, String>,
     pub thread_ids: Vec<u32>,
     pub abs_end_time: u64,
-    path: PathBuf
+    pub path: Option<PathBuf>,
+    pub loaded: bool
 }
 
 fn flatten_opt_res<T,E,F: FnOnce()->E>(v: Option<Result<T,E>>, none_err: F) -> Result<T, E> {
@@ -79,26 +80,52 @@ fn flatten_opt_res<T,E,F: FnOnce()->E>(v: Option<Result<T,E>>, none_err: F) -> R
     }
 }
 
-impl VizData {
-    /// Create a new VizData from a data file and method index. Does not actually load data
-    pub fn new<P: AsRef<Path>>(data_path: P) -> Result<VizData, Box<Error>> {
-        let mut dp = PathBuf::new(); dp.push(data_path);
-        Ok(VizData {
+impl Default for VizData {
+    fn default() -> VizData {
+        VizData {
             calls: Vec::new(),
             method_index: HashMap::new(),
             thread_ids: Vec::new(),
             abs_end_time: 0,
-            path: dp,
-        })
+            path: None,
+            loaded: false
+        }
+    }
+}
+
+impl VizData {
+    /// Create a new VizData from a data file and method index. Does not actually load data
+    pub fn new<P: AsRef<Path>>(data_path: P) -> VizData {
+        let mut dp = PathBuf::new(); dp.push(data_path);
+        VizData {
+            calls: Vec::new(),
+            method_index: HashMap::new(),
+            thread_ids: Vec::new(),
+            abs_end_time: 0,
+            path: Some(dp),
+            loaded: false
+        }
     }
 
     /// Load data from files if it is unloaded
     pub fn load(data: ::std::sync::Arc<::std::sync::RwLock<VizData>>) -> Result<(), io::Error> {
         let mut ach = {
             let s = data.read().unwrap();
-            ZipArchive::new(File::open(&s.path)?)?
+            ZipArchive::new(File::open(&s.path.as_ref().expect("data not associated with path"))?)?
         };
-        { (data.write().unwrap().method_index) = read_method_index(BufReader::new(ach.by_name("methods")?))?; }
+        {
+            let mut header_f = (BufReader::new(ach.by_name("header")?)).lines();
+            let mut vd = data.write().unwrap();
+            vd.loaded = false;
+            vd.calls.clear(); vd.method_index.clear();
+            vd.thread_ids = Vec::new();
+            for id in flatten_opt_res(header_f.next(), ||io::Error::new(io::ErrorKind::UnexpectedEof, ""))?.split(';').filter(|x| x.len()!=0).map(|v| v.parse::<u32>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))) {
+                    
+                        vd.thread_ids.push(id?);
+            }
+            vd.abs_end_time = flatten_opt_res(header_f.next(), ||io::Error::new(io::ErrorKind::UnexpectedEof, ""))?.parse::<u64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        }
+        {(data.write().unwrap().method_index) = read_method_index(BufReader::new(ach.by_name("methods")?))?; }
         let mut res = Vec::new();
         {
             let data_f = BufReader::new(ach.by_name("data")?);
@@ -111,16 +138,7 @@ impl VizData {
             }
             data.write().unwrap().calls.append(&mut res);
         }
-        {
-            let mut header_f = (BufReader::new(ach.by_name("header")?)).lines();
-            let mut vd = data.write().unwrap();
-            vd.thread_ids = Vec::new();
-            for id in flatten_opt_res(header_f.next(), ||io::Error::new(io::ErrorKind::UnexpectedEof, ""))?.split(';').filter(|x| x.len()!=0).map(|v| v.parse::<u32>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))) {
-                    
-                        vd.thread_ids.push(id?);
-            }
-            vd.abs_end_time = flatten_opt_res(header_f.next(), ||io::Error::new(io::ErrorKind::UnexpectedEof, ""))?.parse::<u64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        }
+        data.write().unwrap().loaded = true;
         Ok(())
     }
 }
