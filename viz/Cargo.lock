@@ -320,6 +320,7 @@ dependencies = [
 [[package]]
 name = "runic"
 version = "0.6.0"
+source = "git+https://github.com/andrew-pa/runic#cef3dfa4d3e89aa696948ae8f828c946da08564a"
 dependencies = [
  "cairo-sys-rs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cocoa 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -366,7 +367,7 @@ version = "0.1.0"
 dependencies = [
  "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-cpupool 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "runic 0.6.0",
+ "runic 0.6.0 (git+https://github.com/andrew-pa/runic)",
  "winit 0.11.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "zip 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -556,6 +557,7 @@ dependencies = [
 "checksum rand 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "eba5f8cb59cc50ed56be8880a5c7b496bfd9bd26394e176bc67884094145c2c5"
 "checksum redox_syscall 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)" = "ab105df655884ede59d45b7070c8a65002d921461ee813a024558ca16030eea0"
 "checksum remove_dir_all 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3488ba1b9a2084d38645c4c08276a1752dcbf2c7130d74f1569681ad5d2799c5"
+"checksum runic 0.6.0 (git+https://github.com/andrew-pa/runic)" = "<none>"
 "checksum tempfile 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8cddbd26c5686ece823b507f304c8f188daef548b4cb753512d929ce478a093c"
 "checksum time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)" = "d5d788d3aa77bc0ef3e9621256885555368b47bd495c13dd2e7413c89f845520"
 "checksum token_store 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a686838375fc11103b9c1529c6508320b7bd5e2401cd62831ca51b3e82e61849"
