@@ -97,13 +97,13 @@ impl VizView for FlameChart {
                     _ => {}
                 }
             },
-            &WindowEvent::MouseMoved { position: (x,y), .. } => {
+            &WindowEvent::CursorMoved { position: (x,y), .. } => {
                 if let Some((MouseButton::Left, click_pos, click_offset)) = self.mouse_state {
                     self.offset_x = ((click_pos.x - self.last_mouse.x) / self.pixels_per_nanosecond) as i64 + click_offset;
                 }
                 self.last_mouse = Point::xy(x as f32, y as f32);
             },
-            &WindowEvent::MouseInput { state, button, .. } => {
+            &WindowEvent::MouseInput{ state, button, .. } => {
                 self.mouse_state = match state {
                     ElementState::Pressed =>
                         Some((button, self.last_mouse, self.offset_x)),

@@ -38,7 +38,7 @@ impl MenuContext {
 
     pub fn event(&mut self, e: &WindowEvent) -> Option<(&'static str, usize)> {
         match e {
-            &WindowEvent::MouseMoved { position: (x,y), .. } => {
+            &WindowEvent::CursorMoved { position: (x,y), .. } => {
                 let p = Point::xy(x as f32, y as f32);
                 self.active = -1;
                 for (i,m) in self.open_menus.iter_mut().enumerate() {

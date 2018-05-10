@@ -91,7 +91,7 @@ impl App for VizApp {
     fn event(&mut self, ev: Event) -> bool {
         if let Event::WindowEvent { event: e, .. } = ev {
             match e {
-                WindowEvent::MouseMoved { position, .. } => {
+                WindowEvent::CursorMoved { position, .. } => {
                     self.last_mouse = Point::from(position);
                 },
                 WindowEvent::DroppedFile(ref path) => {
